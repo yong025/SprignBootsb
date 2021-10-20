@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorator="layout/layout2">
+
+<div class="card" layout:fragment="content">
+
+  <div class="card">
+    <div class="card-header">
+      Board Read
+    </div>
+    <div class="card-body">
+      <div class="input-group mb-3">
+        <span class="input-group-text">dno</span>
+        <input type="text" name="dno" class="form-control" readonly
+               th:value="${dto.dno}">
+      </div>
+      <div class="input-group mb-3">
+        <span class="input-group-text">Title</span>
+        <input type="text" name="title" class="form-control" readonly
+               th:value="${dto.title}">
+      </div>
+
+      <div class="input-group mb-3">
+        <span class="input-group-text">Writer</span>
+        <input type="text" name="writer" class="form-control" readonly
+               th:value="${dto.writer}">
+      </div>
+
+      <div class="input-group mb-3">
+        <span class="input-group-text">RegDate</span>
+        <input type="text" name="regDate" class="form-control" readonly
+               th:value="${#temporals.format(dto.regDate, 'yyyy/MM/dd HH:mm:ss')}">
+      </div>
+
+      <div class="input-group mb-3">
+        <span class="input-group-text">ModDate</span>
+        <input type="text" name="modDate" class="form-control" readonly
+               th:value="${#temporals.format(dto.modDate, 'yyyy/MM/dd HH:mm:ss')}">
+      </div>
+
+      <div class="input-group">
+        <span class="input-group-text">Content</span>
+        <textarea class="form-control" aria-label="With textarea" name="content"
+                  rows="4">[[${dto.content}]]</textarea>
+      </div>
+
+      <div class="my-4">
+        <div class="my-4">
+          <div class="float-end">
+            <button type="button" class="btn btn-primary" th:onclick="|modify(${dto.dno})|">Modify</button>
+            <button type="button" class="btn btn-secondary" th:onclick="|moveList()|">List</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .tagDiv {
+      list-style: none;
+      display: flex;
+      flex-direction: row;
+    }
+    .tagDiv li {
+      margin: 0.3em;
+      background-color: #2c3034;
+      border-radius: 0.5em;
+      color: white;
+    }
+  </style>
+
+  <div>
+    <div class="pictureDiv">
+      <img th:each="picture:${dto.pictures}" th:src="@{/display(fileName=${picture.getLink()})}">
+    </div>
+    <ul class="tagDiv">
+      <li th:each="tag:${dto.tags}">[[|#${tag}|]]</li>
+    </ul>
+  </div>
+  <!-- end card -->
+  <div class="card">
+    <div class="card-header"></div>
+    <div class="card-body">
+      <div class="input-group mb-3">
+        <span class="input-group-text">Replyer</span>
+        <input type="text" name="replyer" class="form-control">
+      </div>
+      <div class="input-group mb-3">
+        <span class="input-group-text">ReplyText</span>
+        <input type="text" name="replyText" class="form-control">
+      </div>
+      <div class="input-group mb-3">
+        <button class="btn btn-primary" onclick="registerReply()">Register</button>
+      </div>
+    </div>
+    <div class="card-footer">
+
+    </div>
+
+  </div>
+  <!-- reply card -->
+  <div class="card">
+    <div class="card-header">Replies</div>
+    <div class="card-body">
+      <ul class="list-group repliesList">
+
+      </ul>
+    </div>
+    <div class="card-footer">
+      <nav aria-label="...">
+        <ul class="pagination justify-content-center">
+          <!-- pagination -->
+        </ul>
+      </nav>
+    </div>
+  </div>
+
+</div>
+>
+
+<th:block layout:fragment="script">
+
+  <script th:inline="javascript">
+    function modify(dno) {
+
+      const page = [[${pageRequestDTO.page}]]
+      const size = [[${pageRequestDTO.size}]]
+      const type = [[${pageRequestDTO.type}]]
+      const keyword = [[${pageRequestDTO.keyword}]]
+
+      let searchQuery = ''
+
+      if (type && keyword) {
+        searchQuery += `&type=${type}&keyword=${keyword}`
+      }
+
+      self.location = `/diary/modify?dno=${dno}&page=${page}&size=${size}` + searchQuery
+
+    }
+
+    function moveList() {
+
+      const page = [[${pageRequestDTO.page}]]
+      const size = [[${pageRequestDTO.size}]]
+      const type = [[${pageRequestDTO.type}]]
+      const keyword = [[${pageRequestDTO.keyword}]]
+
+      let searchQuery = ''
+
+      if (type && keyword) {
+        searchQuery += `&type=${type}&keyword=${keyword}`
+      }
+
+      self.location = `/diary/list?page=${page}&size=${size}` + searchQuery
+
+    }
+
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <script th:inline="javascript">
+
+    const dno = [[${dto.dno}]]
+    let replyPage = 1
+    let replySize = 10
+
+
+    function makeListAndPagination(replyPageResponse) {
+      const dtoList = replyPageResponse.dtoList; //dtoList는 배열
+      replyPage = replyPageResponse.page
+      replySize = replyPageResponse.size
+
+      let str = "";
+
+      for (const reply of dtoList) {
+        //console.log(reply)
+        str += "<li class='list-group-item d-flex justify-content-between align-items-center'>"
+        str += `<div class="replyBox" data-rno="${reply.rno}"><span>${reply.rno}</span> - <span class="rText">${reply.replyText}</span>
+                            <span class="regDate">${reply.replyDate}</span>
+                            <button class="btn btn-sm btn-warning" onclick="modifyReply(this)">수정</button>
+                        </div>`
+        str += "</li>"
+      }
+      document.querySelector(".repliesList").innerHTML = str
+
+      //paging
+      const pagination = document.querySelector(".pagination")
+
+      let pageStr = "";
+      //prev
+      if (replyPageResponse.prev) {
+        pageStr += `<li class="page-item"><a class="page-link"
+                            href="javascript:getList(${replyPageResponse.start - 1})" tabindex="-1">Previous</a></li>`
+      }
+      //num
+      for (let i = replyPageResponse.start; i <= replyPageResponse.end; i++) {
+        pageStr += `<li class="page-item ${i == replyPageResponse.page ? "active" : ""} "><a class="page-link"
+                            href="javascript:getList(${i})" tabindex="-1">${i}</a></li>`
+      }
+      //next
+      if (replyPageResponse.next) {
+        pageStr += `<li class="page-item"><a class="page-link"
+                            href="javascript:getList(${replyPageResponse.end + 1})" tabindex="-1">next</a></li>`
+      }
+
+      pagination.innerHTML = pageStr;
+    }
+
+    //실제 list를 출력하는 메서드
+    async function getList(pageNum) {
+
+      const response = await axios.get(`/replies/list/${dno}?page=${pageNum}`)
+      const replyPageResponse = await response.data
+
+      //console.log(replyPageResponse)
+      makeListAndPagination(replyPageResponse);
+
+    }
+
+    function registerReply() {
+
+      const replyeObj = {
+        dno: dno,
+        replyer: document.querySelector("input[name='replyer']").value,
+        replyText: document.querySelector("input[name='replyText']").value,
+      }
+
+      async function registerAjax() {
+        const response = await axios.post("/replies", replyeObj)
+        const replyPageResponse = await response.data
+        console.log(replyPageResponse)
+
+        makeListAndPagination(replyPageResponse);
+        document.querySelector("input[name='replyer']").value = ""
+        document.querySelector("input[name='replyText']").value = ""
+      }
+
+      registerAjax();
+
+    }
+
+    let cloneReply = null
+    let targetLi = null
+
+    function modifyReply(element) {
+
+      const targetDiv = element.closest(".replyBox")
+      const currentTargetLi = element.closest("li")
+
+
+      if(targetLi === null) {
+        targetLi = currentTargetLi
+      }else if(targetLi !== currentTargetLi) {
+        targetLi.querySelector("div").remove()
+        targetLi.appendChild(cloneReply)
+
+        targetLi = currentTargetLi
+      }
+
+      cloneReply = targetDiv.cloneNode(true) //원래 댓글(targetDiv)을 카피(클론)
+
+
+      const replyText = targetDiv.querySelector(".rText").innerHTML
+      const rno = targetDiv.getAttribute("data-rno")
+
+      // console.log(replyText, rno) 댓글의 번호와 원본 댓글내용 처리 완료
+
+      const modifyDiv = `<div><input type="text" class="editText"
+                    value="${replyText}"><button class="btn btn-sm btn-dark" onclick="cancelModifyReply(this)">취소</button>
+                    <button class="btn btn-sm warning" onclick="modifyReplySend(this)">수정</button>
+                    <button class="btn btn-sm danger" onclick="deleteReply()">삭제</button></div>`
+
+      targetLi.innerHTML = modifyDiv;
+
+    }
+
+    function cancelModifyReply(element) {
+
+      element.closest("div").remove()
+
+
+      targetLi.appendChild(cloneReply)
+
+    }
+
+    function deleteReply() {
+      const rno = cloneReply.getAttribute("data-rno")
+
+      async function sendDeleteReply() {
+        const response = await axios.delete(`/replies/${dno}/${rno}?page=${replyPage}&size=${replySize}`)
+        const replyPageResponse = await response.data
+
+        alert("댓글이 삭제되었습니다.")
+        makeListAndPagination(replyPageResponse)
+      }
+      sendDeleteReply();
+
+    }
+
+    function modifyReplySend(element) {
+      console.log(element)
+
+      const rno = cloneReply.getAttribute("data-rno")
+      const replyText = document.querySelector(".editText").value
+
+      const replyObj = {rno ,replyText, dno} //키 값의 변수명이 같을 경우 이렇게 작성 가능
+
+      async function updateReply() {
+        const response = await axios.put(`/replies/${dno}/${rno}?page=${replyPage}&size=${replySize}`, replyObj)
+        const replyPageResponse = await response.data
+
+        console.log(replyObj)
+
+        alert("댓글이 수정되었습니다.")
+        makeListAndPagination(replyPageResponse)
+      }
+
+      updateReply()
+    }
+
+
+    getList(-1);
+
+  </script>
+</th:block>
