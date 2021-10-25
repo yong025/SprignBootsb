@@ -26,6 +26,10 @@ public class Member {
     //회원권한이 있음 멤버롤도 함께 설계
     @ElementCollection(fetch = FetchType.LAZY)
     private Set<MemberRole> roleSet;//entity는 Set으로 설정
+
+    public void changePassword(String password){
+        this.mpw = password;
+    }
 }
 
 

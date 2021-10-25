@@ -13,6 +13,8 @@ public interface DiaryRepository extends JpaRepository<Diary, Long> , DiarySearc
     @Query("select d from Diary d left join d.tags dt where dt like concat('%',:tag,'%')")//인텔리제이 오류나오지만 사용가능
     Page<Diary> searchTags(String tag, Pageable pageable);
 
+    //value를 주고 nativeQuery로 실제 쿼리를 사용할 수도 있다.
+    //혹은 projection을 사용해서 뽑아올 수도 있다.
     @Query("select d, coalesce(sum(f.score), 0) from Diary d left join Favorite f on f.diary = d group by d")
     Page<Object[]> findWithFavoriteCount(Pageable pageable);
 }
